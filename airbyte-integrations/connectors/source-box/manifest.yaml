@@ -1,4 +1,4 @@
-version: 5.16.0
+version: 6.61.5
 
 type: DeclarativeSource
 
@@ -14,881 +14,103 @@ check:
     - events
 
 definitions:
-  streams:
-    events:
-      type: DeclarativeStream
-      name: events
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/events
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: stream_position
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_stream_position') }}"
-            stop_condition: "{{ response.chunk_size == 0 }}"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/events"
-    sign_templates:
-      type: DeclarativeStream
-      name: sign_templates
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/sign_templates
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: marker
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get(\"next_marker\")  }}"
-            stop_condition: "{{ response.get(\"next_marker\") is none }}"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/sign_templates"
-    collections:
-      type: DeclarativeStream
-      name: collections
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/collections
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: OffsetIncrement
-            page_size: 100
-            inject_on_first_request: true
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/collections"
-    collection_items:
-      type: DeclarativeStream
-      name: collection_items
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/collections/{{ stream_partition.collection }}/items
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          pagination_strategy:
-            type: OffsetIncrement
-            inject_on_first_request: true
-        partition_router:
-          type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              parent_key: id
-              partition_field: collection
-              stream:
-                $ref: "#/definitions/streams/collections"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/collection_items"
-    sign_request:
-      type: DeclarativeStream
-      name: sign_request
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/sign_requests
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: marker
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_marker') }}"
-            stop_condition: "{{ response.get('next_marker') is none }}"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/sign_request"
-    admin_logs:
-      type: DeclarativeStream
-      name: admin_logs
-      primary_key:
-        - event_id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/events?stream_type=admin_logs
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: stream_position
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_stream_position', '') }}"
-            stop_condition: "{{ response.chunk_size == 0 }}"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/admin_logs"
-    files:
-      type: DeclarativeStream
-      name: files
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/folders/0/items
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-          record_filter:
-            type: RecordFilter
-            condition: "{{ record['type'] == \"file\"}}"
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: OffsetIncrement
-            page_size: 100
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/files"
-    file_collaborations:
-      type: DeclarativeStream
-      name: file_collaborations
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/files/{{ stream_slice['file_id'] }}/collaborations
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: marker
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_marker') }}"
-            stop_condition: "{{ response.get('next_marker') is none }}"
-        partition_router:
-          type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              parent_key: id
-              partition_field: file_id
-              stream:
-                $ref: "#/definitions/streams/files"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/file_collaborations"
-    folder_collaborations:
-      type: DeclarativeStream
-      name: folder_collaborations
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/folders/{{ stream_slice['folder_id'] }}/collaborations
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: marker
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_marker') }}"
-            stop_condition: "{{ response.get('next_marker') is none }}"
-        partition_router:
-          type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              parent_key: id
-              partition_field: folder_id
-              stream:
-                $ref: "#/definitions/streams/folders"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/folder_collaborations"
-    file_comments:
-      type: DeclarativeStream
-      name: file_comments
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/files/{{ stream_slice['file_id'] }}/comments
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: OffsetIncrement
-            page_size: 100
-            inject_on_first_request: true
-        partition_router:
-          type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              parent_key: id
-              partition_field: file_id
-              stream:
-                $ref: "#/definitions/streams/files"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/file_comments"
-    recent_items:
-      type: DeclarativeStream
-      name: recent_items
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/recent_items
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-              - "*"
-              - item
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: marker
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: CursorPagination
-            page_size: 100
-            cursor_value: "{{ response.get('next_marker') }}"
-            stop_condition: "{{ response.get('next_marker') is none }}"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/recent_items"
-    file_tasks:
-      type: DeclarativeStream
-      name: file_tasks
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/files/{{ stream_slice['file_id'] }}/tasks
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-              - "*"
-              - task_assignment_collection
-              - entries
-              - "*"
-        partition_router:
-          type: SubstreamPartitionRouter
-          parent_stream_configs:
-            - type: ParentStreamConfig
-              parent_key: id
-              partition_field: file_id
-              stream:
-                $ref: "#/definitions/streams/files"
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/file_tasks"
-    trashed_items:
-      type: DeclarativeStream
-      name: trashed_items
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/folders/trash/items
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          pagination_strategy:
-            type: OffsetIncrement
-            page_size: 1000
-            inject_on_first_request: true
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/trashed_items"
-    users:
-      type: DeclarativeStream
-      name: users
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/users
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          pagination_strategy:
-            type: OffsetIncrement
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/users"
-    folders:
-      type: DeclarativeStream
-      name: folders
-      primary_key:
-        - id
-      retriever:
-        type: SimpleRetriever
-        requester:
-          $ref: "#/definitions/base_requester"
-          path: /2.0/folders/0/items
-          http_method: GET
-        record_selector:
-          type: RecordSelector
-          extractor:
-            type: DpathExtractor
-            field_path:
-              - entries
-          record_filter:
-            type: RecordFilter
-            condition: "{{ record['type'] == \"folder\"}}"
-        paginator:
-          type: DefaultPaginator
-          page_token_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: offset
-          page_size_option:
-            type: RequestOption
-            inject_into: request_parameter
-            field_name: limit
-          pagination_strategy:
-            type: OffsetIncrement
-            page_size: 100
-            inject_on_first_request: true
-      schema_loader:
-        type: InlineSchemaLoader
-        schema:
-          $ref: "#/schemas/folders"
-  base_requester:
-    type: HttpRequester
-    url_base: https://api.box.com
-    authenticator:
-      type: OAuthAuthenticator
-      client_id: "{{ config[\"client_id\"] }}"
-      grant_type: client_credentials
-      client_secret: "{{ config[\"client_secret\"] }}"
-      expires_in_name: expires_in
-      access_token_name: access_token
-      refresh_request_body:
-        box_subject_id: "{{ config['user'] }}"
-        box_subject_type: user
-      token_refresh_endpoint: https://api.box.com/oauth2/token
+  linked:
+    HttpRequester:
+      authenticator:
+        type: OAuthAuthenticator
+        token_refresh_endpoint: https://api.box.com/oauth2/token
+        client_id: "{{ config['client_id'] }}"
+        client_secret: "{{ config['client_secret'] }}"
+        refresh_token: "{{ config['refresh_token'] }}"
+        grant_type: refresh_token
+        access_token_name: access_token
+        expires_in_name: expires_in
+        refresh_request_headers:
+          Content-Type: application/x-www-form-urlencoded
+        refresh_request_body:
+          grant_type: refresh_token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+    SimpleRetriever:
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 100
+          inject_on_first_request: true
 
 streams:
-  - $ref: "#/definitions/streams/events"
-  - $ref: "#/definitions/streams/sign_templates"
-  - $ref: "#/definitions/streams/collections"
-  - $ref: "#/definitions/streams/collection_items"
-  - $ref: "#/definitions/streams/sign_request"
-  - $ref: "#/definitions/streams/admin_logs"
-  - $ref: "#/definitions/streams/files"
-  - $ref: "#/definitions/streams/file_collaborations"
-  - $ref: "#/definitions/streams/folder_collaborations"
-  - $ref: "#/definitions/streams/file_comments"
-  - $ref: "#/definitions/streams/recent_items"
-  - $ref: "#/definitions/streams/file_tasks"
-  - $ref: "#/definitions/streams/trashed_items"
-  - $ref: "#/definitions/streams/users"
-  - $ref: "#/definitions/streams/folders"
-
-spec:
-  type: Spec
-  connection_specification:
-    type: object
-    $schema: http://json-schema.org/draft-07/schema#
-    required:
-      - client_id
-      - client_secret
-      - user
-    properties:
-      client_id:
-        type: string
-        name: client_id
-        order: 0
-        title: OAuth Client ID
-        airbyte_secret: true
-      client_secret:
-        type: string
-        name: client_secret
-        order: 1
-        title: OAuth Client Secret
-        airbyte_secret: true
-      user:
-        type: number
-        order: 2
-        title: User
-    additionalProperties: true
-
-metadata:
-  autoImportSchema:
-    events: true
-    sign_templates: true
-    collections: true
-    collection_items: true
-    sign_request: true
-    admin_logs: true
-    files: true
-    file_collaborations: true
-    folder_collaborations: true
-    file_comments: true
-    recent_items: true
-    file_tasks: true
-    trashed_items: true
-    users: true
-    folders: true
-  testedStreams:
-    events:
-      streamHash: 5f6a527cfa95216243803a32516a01f06260bb01
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    sign_templates:
-      streamHash: 4ab2165704ff19049bf1ecc510154302f122e5ba
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    collections:
-      streamHash: 99a1e98e0e5e1f0e34c55e3c067158efc139614d
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    collection_items:
-      streamHash: 166e60e6b8bccc1e6854a88f7ad29fe76f08a83a
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    sign_request:
-      streamHash: a75dbf901501cd636c8087c31ea771b4aba77d65
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: false
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    admin_logs:
-      streamHash: d29f65619562bd57f0ab2ffde25f45fe85094fed
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    files:
-      streamHash: f2bddba5e78d73843ff573adddc0f5b664d98deb
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    file_collaborations:
-      streamHash: b57e258db538c594ace1cba278854f0702bbe926
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    folder_collaborations:
-      streamHash: 9154707962f8ebc5736593f901aa484ba6aa3d34
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    file_comments:
-      streamHash: 2711d975ffe518367db630ef6dc0c2598b5cb86d
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    recent_items:
-      streamHash: a220c9ba1787d7da58f2d496a76a176600c800ff
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    file_tasks:
-      streamHash: b7cdc6e9b385a24c4f491d8b820a6924bd52070f
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    trashed_items:
-      hasRecords: true
-      streamHash: 220c9d1eb25065d60d7347c9219ae6882b3bfdb4
-      hasResponse: true
-      primaryKeysAreUnique: true
-      primaryKeysArePresent: true
-      responsesAreSuccessful: true
-    users:
-      streamHash: 0e26a32514f04fae7185887ae41861452eb580f7
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-    folders:
-      streamHash: e8aee8caba4e6a759ead1aa1b2b20f27f6d690de
-      hasResponse: true
-      responsesAreSuccessful: true
-      hasRecords: true
-      primaryKeysArePresent: true
-      primaryKeysAreUnique: true
-  assist:
-    docsUrl: https://developer.box.com/reference/
-
-schemas:
-  events:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      additional_details:
-        type:
-          - object
-          - "null"
-        properties:
-          original_item_id:
-            type:
-              - string
-              - "null"
-          original_item_name:
-            type:
-              - string
-              - "null"
-          original_item_type:
-            type:
-              - string
-              - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      created_by:
-        type:
-          - object
-          - "null"
+  - type: DeclarativeStream
+    name: events
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: stream_position
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_stream_position') }}"
+          stop_condition: "{{ response.chunk_size == 0 }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+          client_id_name: ""
+          client_secret_name: ""
+          refresh_token_name: ""
+          grant_type_name: ""
+          token_expiry_date: ""
+          token_expiry_date_format: ""
+        http_method: GET
+        url: https://api.box.com/2.0/events
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
         properties:
           type:
             type:
               - string
               - "null"
-          id:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-      event_id:
-        type:
-          - string
-          - "null"
-      event_type:
-        type:
-          - string
-          - "null"
-      recorded_at:
-        type:
-          - string
-          - "null"
-      session_id:
-        type:
-          - string
-          - "null"
-      source:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          description:
-            type:
-              - string
-              - "null"
-          assigned_at:
-            type:
-              - string
-              - "null"
-          assigned_by:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
-                type:
-                  - string
-                  - "null"
-              id:
-                type:
-                  - string
-                  - "null"
-              login:
-                type:
-                  - string
-                  - "null"
-              name:
-                type:
-                  - string
-                  - "null"
-          assigned_to:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
-                type:
-                  - string
-                  - "null"
-              id:
-                type:
-                  - string
-                  - "null"
-              login:
-                type:
-                  - string
-                  - "null"
-              name:
-                type:
-                  - string
-                  - "null"
-          content_created_at:
-            type:
-              - string
-              - "null"
-          content_modified_at:
-            type:
-              - string
-              - "null"
-          created_at:
+          event_id:
             type:
               - string
               - "null"
@@ -905,57 +127,44 @@ schemas:
                 type:
                   - string
                   - "null"
-              login:
-                type:
-                  - string
-                  - "null"
               name:
                 type:
                   - string
                   - "null"
-          etag:
+              login:
+                type:
+                  - string
+                  - "null"
+          created_at:
             type:
               - string
               - "null"
-          file_version:
+          recorded_at:
+            type:
+              - string
+              - "null"
+          event_type:
+            type:
+              - string
+              - "null"
+          session_id:
+            type:
+              - string
+              - "null"
+          source:
             type:
               - object
               - "null"
             properties:
               type:
+                type:
+                  - string
+                  - "null"
+              description:
                 type:
                   - string
                   - "null"
               id:
-                type:
-                  - string
-                  - "null"
-              sha1:
-                type:
-                  - string
-                  - "null"
-          id:
-            type:
-              - string
-              - "null"
-          invite_email:
-            type:
-              - string
-              - "null"
-          is_reply_comment:
-            type:
-              - boolean
-              - "null"
-          item:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
-                type:
-                  - string
-                  - "null"
-              etag:
                 type:
                   - string
                   - "null"
@@ -976,86 +185,7 @@ schemas:
                     type:
                       - string
                       - "null"
-              id:
-                type:
-                  - string
-                  - "null"
-              name:
-                type:
-                  - string
-                  - "null"
               sequence_id:
-                type:
-                  - string
-                  - "null"
-              sha1:
-                type:
-                  - string
-                  - "null"
-          item_status:
-            type:
-              - string
-              - "null"
-          message:
-            type:
-              - string
-              - "null"
-          modified_at:
-            type:
-              - string
-              - "null"
-          modified_by:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
-                type:
-                  - string
-                  - "null"
-              id:
-                type:
-                  - string
-                  - "null"
-              login:
-                type:
-                  - string
-                  - "null"
-              name:
-                type:
-                  - string
-                  - "null"
-          name:
-            type:
-              - string
-              - "null"
-          owned_by:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
-                type:
-                  - string
-                  - "null"
-              id:
-                type:
-                  - string
-                  - "null"
-              login:
-                type:
-                  - string
-                  - "null"
-              name:
-                type:
-                  - string
-                  - "null"
-          parent:
-            type:
-              - object
-              - "null"
-            properties:
-              type:
                 type:
                   - string
                   - "null"
@@ -1063,7 +193,7 @@ schemas:
                 type:
                   - string
                   - "null"
-              id:
+              sha1:
                 type:
                   - string
                   - "null"
@@ -1071,404 +201,256 @@ schemas:
                 type:
                   - string
                   - "null"
-              sequence_id:
-                type:
-                  - string
-                  - "null"
-          path_collection:
-            type:
-              - object
-              - "null"
-            properties:
-              entries:
-                type:
-                  - array
-                  - "null"
-                items:
-                  type:
-                    - object
-                    - "null"
-                  properties:
-                    type:
-                      type:
-                        - string
-                        - "null"
-                    etag:
-                      type:
-                        - string
-                        - "null"
-                    id:
-                      type:
-                        - string
-                        - "null"
-                    name:
-                      type:
-                        - string
-                        - "null"
-                    sequence_id:
-                      type:
-                        - string
-                        - "null"
-              total_count:
+              size:
                 type:
                   - number
                   - "null"
-          purged_at:
-            type:
-              - string
-              - "null"
-          resolution_state:
-            type:
-              - string
-              - "null"
-          role:
-            type:
-              - string
-              - "null"
-          sequence_id:
-            type:
-              - string
-              - "null"
-          sha1:
-            type:
-              - string
-              - "null"
-          size:
-            type:
-              - number
-              - "null"
-          status:
-            type:
-              - string
-              - "null"
-          synced:
-            type:
-              - boolean
-              - "null"
-          trashed_at:
-            type:
-              - string
-              - "null"
-  sign_templates:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      additional_info:
-        type:
-          - object
-          - "null"
-        properties:
-          non_editable:
-            type:
-              - array
-              - "null"
-          required:
-            type:
-              - object
-              - "null"
-            properties:
-              signers:
+              path_collection:
                 type:
-                  - array
+                  - object
                   - "null"
-                items:
+                properties:
+                  total_count:
+                    type:
+                      - number
+                      - "null"
+                  entries:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type:
+                        - object
+                        - "null"
+                      properties:
+                        type:
+                          type:
+                            - string
+                            - "null"
+                        id:
+                          type:
+                            - string
+                            - "null"
+                        name:
+                          type:
+                            - string
+                            - "null"
+              created_at:
+                type:
+                  - string
+                  - "null"
+              modified_at:
+                type:
+                  - string
+                  - "null"
+              content_created_at:
+                type:
+                  - string
+                  - "null"
+              content_modified_at:
+                type:
+                  - string
+                  - "null"
+              created_by:
+                type:
+                  - object
+                  - "null"
+                properties:
                   type:
-                    - array
-                    - "null"
-                  items:
                     type:
                       - string
                       - "null"
-      are_email_settings_locked:
-        type:
-          - boolean
-          - "null"
-      are_fields_locked:
-        type:
-          - boolean
-          - "null"
-      are_files_locked:
-        type:
-          - boolean
-          - "null"
-      are_options_locked:
-        type:
-          - boolean
-          - "null"
-      are_recipients_locked:
-        type:
-          - boolean
-          - "null"
-      days_valid:
-        type:
-          - number
-          - "null"
-      email_message:
-        type:
-          - string
-          - "null"
-      email_subject:
-        type:
-          - string
-          - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      parent_folder:
-        type:
-          - object
-          - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+                  login:
+                    type:
+                      - string
+                      - "null"
+              modified_by:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+                  login:
+                    type:
+                      - string
+                      - "null"
+              owned_by:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+                  login:
+                    type:
+                      - string
+                      - "null"
+              parent:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+              item_status:
+                type:
+                  - string
+                  - "null"
+              is_package:
+                type:
+                  - boolean
+                  - "null"
+              synced:
+                type:
+                  - boolean
+                  - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: sign_templates
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: marker
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get(\"next_marker\")  }}"
+          stop_condition: "{{ response.get(\"next_marker\") is none }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/sign_templates
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
         properties:
           type:
-            type:
-              - string
-              - "null"
-          etag:
             type:
               - string
               - "null"
           id:
-            type:
-              - string
-              - "null"
+            type: string
           name:
             type:
               - string
               - "null"
-          sequence_id:
+          signers:
             type:
-              - string
+              - array
               - "null"
-      signers:
-        type:
-          - array
-          - "null"
-        items:
-          type:
-            - object
-            - "null"
-          properties:
-            email:
-              type:
-                - string
-                - "null"
-            inputs:
-              type:
-                - array
-                - "null"
-            is_in_person:
-              type:
-                - boolean
-                - "null"
-            label:
-              type:
-                - string
-                - "null"
-            order:
-              type:
-                - number
-                - "null"
-            public_id:
-              type:
-                - string
-                - "null"
-            role:
-              type:
-                - string
-                - "null"
-      source_files:
-        type:
-          - array
-          - "null"
-        items:
-          type:
-            - object
-            - "null"
-          properties:
-            type:
-              type:
-                - string
-                - "null"
-            etag:
-              type:
-                - string
-                - "null"
-            file_version:
+            items:
               type:
                 - object
                 - "null"
               properties:
-                type:
+                role:
                   type:
                     - string
                     - "null"
-                id:
+                email:
                   type:
                     - string
                     - "null"
-                sha1:
+                label:
                   type:
                     - string
                     - "null"
-            id:
-              type:
-                - string
-                - "null"
-            name:
-              type:
-                - string
-                - "null"
-            sequence_id:
-              type:
-                - string
-                - "null"
-            sha1:
-              type:
-                - string
-                - "null"
-    required:
-      - id
-  collections:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      collection_type:
-        type:
-          - string
-          - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  collection_items:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      etag:
-        type:
-          - string
-          - "null"
-      file_version:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
+                order:
+                  type:
+                    - number
+                    - "null"
+                inputs:
+                  type:
+                    - array
+                    - "null"
+                public_id:
+                  type:
+                    - string
+                    - "null"
+                is_in_person:
+                  type:
+                    - boolean
+                    - "null"
+          days_valid:
             type:
-              - string
+              - number
               - "null"
-          id:
-            type:
-              - string
-              - "null"
-          sha1:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      sequence_id:
-        type:
-          - string
-          - "null"
-      sha1:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  sign_request:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      are_reminders_enabled:
-        type:
-          - boolean
-          - "null"
-      are_text_signatures_enabled:
-        type:
-          - boolean
-          - "null"
-      id:
-        type: string
-      is_document_preparation_needed:
-        type:
-          - boolean
-          - "null"
-      is_phone_verification_required_to_view:
-        type:
-          - boolean
-          - "null"
-      name:
-        type:
-          - string
-          - "null"
-      parent_folder:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          etag:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-          sequence_id:
-            type:
-              - string
-              - "null"
-      prefill_tags:
-        type:
-          - array
-          - "null"
-      sign_files:
-        type:
-          - object
-          - "null"
-        properties:
-          files:
+          source_files:
             type:
               - array
               - "null"
@@ -1481,7 +463,23 @@ schemas:
                   type:
                     - string
                     - "null"
+                id:
+                  type:
+                    - string
+                    - "null"
                 etag:
+                  type:
+                    - string
+                    - "null"
+                name:
+                  type:
+                    - string
+                    - "null"
+                sha1:
+                  type:
+                    - string
+                    - "null"
+                sequence_id:
                   type:
                     - string
                     - "null"
@@ -1502,150 +500,221 @@ schemas:
                       type:
                         - string
                         - "null"
-                id:
-                  type:
-                    - string
-                    - "null"
-                name:
-                  type:
-                    - string
-                    - "null"
-                sequence_id:
-                  type:
-                    - string
-                    - "null"
-                sha1:
-                  type:
-                    - string
-                    - "null"
-          is_ready_for_download:
+          email_message:
+            type:
+              - string
+              - "null"
+          email_subject:
+            type:
+              - string
+              - "null"
+          parent_folder:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              etag:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              sequence_id:
+                type:
+                  - string
+                  - "null"
+          additional_info:
+            type:
+              - object
+              - "null"
+            properties:
+              required:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  signers:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type:
+                        - array
+                        - "null"
+                      items:
+                        type:
+                          - string
+                          - "null"
+              non_editable:
+                type:
+                  - array
+                  - "null"
+          are_files_locked:
             type:
               - boolean
               - "null"
-      signers:
-        type:
-          - array
-          - "null"
-        items:
-          type:
-            - object
-            - "null"
-          properties:
-            email:
-              type:
-                - string
-                - "null"
-            has_viewed_document:
-              type:
-                - boolean
-                - "null"
-            inputs:
-              type:
-                - array
-                - "null"
-            is_in_person:
-              type:
-                - boolean
-                - "null"
-            login_required:
-              type:
-                - boolean
-                - "null"
-            order:
-              type:
-                - number
-                - "null"
-            role:
-              type:
-                - string
-                - "null"
-            suppress_notifications:
-              type:
-                - boolean
-                - "null"
-            verification_phone_number:
-              type:
-                - string
-                - "null"
-      source_files:
-        type:
-          - array
-          - "null"
-        items:
-          type:
-            - object
-            - "null"
-          properties:
+          are_fields_locked:
             type:
-              type:
-                - string
-                - "null"
-            etag:
-              type:
-                - string
-                - "null"
-            file_version:
-              type:
-                - object
-                - "null"
-              properties:
-                type:
-                  type:
-                    - string
-                    - "null"
-                id:
-                  type:
-                    - string
-                    - "null"
-                sha1:
-                  type:
-                    - string
-                    - "null"
-            id:
-              type:
-                - string
-                - "null"
-            name:
-              type:
-                - string
-                - "null"
-            sequence_id:
-              type:
-                - string
-                - "null"
-            sha1:
-              type:
-                - string
-                - "null"
-      status:
-        type:
-          - string
-          - "null"
-    required:
+              - boolean
+              - "null"
+          are_options_locked:
+            type:
+              - boolean
+              - "null"
+          are_recipients_locked:
+            type:
+              - boolean
+              - "null"
+          are_email_settings_locked:
+            type:
+              - boolean
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: collections
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 100
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/collections
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
       - id
-  admin_logs:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      accessible_by:
-        type:
-          - object
-          - "null"
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
         properties:
           type:
             type:
               - string
               - "null"
           id:
+            type: string
+          name:
             type:
               - string
               - "null"
-          login:
+          collection_type:
+            type:
+              - string
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: collection_items
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: >-
+          https://api.box.com/2.0/collections/{{ stream_partition.collection
+          }}/items
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            stream:
+              $ref: "#/streams/2"
+            parent_key: id
+            partition_field: collection
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          etag:
             type:
               - string
               - "null"
@@ -1653,16 +722,15 @@ schemas:
             type:
               - string
               - "null"
-      additional_details:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
+          sha1:
             type:
               - string
               - "null"
-          metadata:
+          sequence_id:
+            type:
+              - string
+              - "null"
+          file_version:
             type:
               - object
               - "null"
@@ -1671,165 +739,130 @@ schemas:
                 type:
                   - string
                   - "null"
-              operationParams:
+              id:
                 type:
                   - string
                   - "null"
-          access_token_identifier:
-            type:
-              - string
-              - "null"
-          collab_id:
-            type:
-              - string
-              - "null"
-          collection:
-            type:
-              - object
-              - "null"
-            properties:
-              collection_id:
-                type:
-                  - number
-                  - "null"
-              collection_name:
+              sha1:
                 type:
                   - string
                   - "null"
-              user:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  email:
-                    type:
-                      - string
-                      - "null"
-                  id:
-                    type:
-                      - number
-                      - "null"
-                  name:
-                    type:
-                      - string
-                      - "null"
-          collection_item:
-            type:
-              - object
-              - "null"
-            properties:
-              collection_id:
-                type:
-                  - number
-                  - "null"
-              collection_name:
-                type:
-                  - string
-                  - "null"
-              item:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  file:
-                    type:
-                      - number
-                      - "null"
-              user:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  email:
-                    type:
-                      - string
-                      - "null"
-                  id:
-                    type:
-                      - number
-                      - "null"
-                  name:
-                    type:
-                      - string
-                      - "null"
-          comment_id:
-            type:
-              - number
-              - "null"
-          ekm_id:
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: sign_request
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: marker
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_marker') }}"
+          stop_condition: "{{ response.get('next_marker') is none }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/sign_requests
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
             type:
               - string
               - "null"
-          invitation_message:
+          id:
+            type: string
+          name:
             type:
               - string
               - "null"
-          is_performed_by_admin:
-            type:
-              - boolean
-              - "null"
-          message:
+          status:
             type:
               - string
               - "null"
-          original_item_id:
+          signers:
             type:
-              - string
+              - array
               - "null"
-          original_item_name:
-            type:
-              - string
-              - "null"
-          original_item_type:
-            type:
-              - string
-              - "null"
-          role:
-            type:
-              - string
-              - "null"
-          service_id:
-            type:
-              - string
-              - "null"
-          service_name:
-            type:
-              - string
-              - "null"
-          sharedLinkSettings:
-            type:
-              - object
-              - "null"
-            properties:
-              newCanDownload:
-                type:
-                  - boolean
-                  - "null"
-              newCanEdit:
-                type:
-                  - boolean
-                  - "null"
-              newCanPreview:
-                type:
-                  - boolean
-                  - "null"
-              newIsExpirationDateSet:
-                type:
-                  - boolean
-                  - "null"
-              newIsPasswordProtected:
-                type:
-                  - boolean
-                  - "null"
-              newVisibilityStatus:
-                type:
-                  - string
-                  - "null"
-          shared_link_id:
-            type:
-              - string
-              - "null"
-          sign_request:
+            items:
+              type:
+                - object
+                - "null"
+              properties:
+                role:
+                  type:
+                    - string
+                    - "null"
+                email:
+                  type:
+                    - string
+                    - "null"
+                order:
+                  type:
+                    - number
+                    - "null"
+                inputs:
+                  type:
+                    - array
+                    - "null"
+                is_in_person:
+                  type:
+                    - boolean
+                    - "null"
+                login_required:
+                  type:
+                    - boolean
+                    - "null"
+                has_viewed_document:
+                  type:
+                    - boolean
+                    - "null"
+                suppress_notifications:
+                  type:
+                    - boolean
+                    - "null"
+                verification_phone_number:
+                  type:
+                    - string
+                    - "null"
+          sign_files:
             type:
               - object
               - "null"
@@ -1851,11 +884,23 @@ schemas:
                       type:
                         - string
                         - "null"
+                    etag:
+                      type:
+                        - string
+                        - "null"
                     name:
                       type:
                         - string
                         - "null"
-                    parent:
+                    sha1:
+                      type:
+                        - string
+                        - "null"
+                    sequence_id:
+                      type:
+                        - string
+                        - "null"
+                    file_version:
                       type:
                         - object
                         - "null"
@@ -1868,252 +913,69 @@ schemas:
                           type:
                             - string
                             - "null"
-              ready_sign_link:
+                        sha1:
+                          type:
+                            - string
+                            - "null"
+              is_ready_for_download:
                 type:
-                  - object
+                  - boolean
                   - "null"
-                properties:
-                  id:
-                    type:
-                      - string
-                      - "null"
-              redirection:
+          prefill_tags:
+            type:
+              - array
+              - "null"
+          source_files:
+            type:
+              - array
+              - "null"
+            items:
+              type:
+                - object
+                - "null"
+              properties:
                 type:
-                  - object
-                  - "null"
-                properties:
-                  declined_redirect_url:
-                    type:
-                      - string
-                      - "null"
-                  redirect_url:
-                    type:
-                      - string
-                      - "null"
-              requestor:
-                type:
-                  - object
-                  - "null"
-                properties:
                   type:
-                    type:
-                      - string
-                      - "null"
-                  id:
-                    type:
-                      - string
-                      - "null"
-                  login:
-                    type:
-                      - string
-                      - "null"
-                  name:
-                    type:
-                      - string
-                      - "null"
-              requestor_ip_address:
-                type:
-                  - string
-                  - "null"
-              sender_message:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  message:
-                    type:
-                      - string
-                      - "null"
-                  subject:
-                    type:
-                      - string
-                      - "null"
-              sign_request_id:
-                type:
-                  - string
-                  - "null"
-              sign_request_short_id:
-                type:
-                  - string
-                  - "null"
-              signer:
-                type:
-                  - object
-                  - "null"
-                properties:
+                    - string
+                    - "null"
+                id:
                   type:
+                    - string
+                    - "null"
+                etag:
+                  type:
+                    - string
+                    - "null"
+                name:
+                  type:
+                    - string
+                    - "null"
+                sha1:
+                  type:
+                    - string
+                    - "null"
+                sequence_id:
+                  type:
+                    - string
+                    - "null"
+                file_version:
+                  type:
+                    - object
+                    - "null"
+                  properties:
                     type:
-                      - string
-                      - "null"
-                  id:
-                    type:
-                      - string
-                      - "null"
-                  login:
-                    type:
-                      - string
-                      - "null"
-                  name:
-                    type:
-                      - string
-                      - "null"
-              signer_ip_address:
-                type:
-                  - string
-                  - "null"
-              status:
-                type:
-                  - string
-                  - "null"
-          size:
-            type:
-              - number
-              - "null"
-          task:
-            type:
-              - object
-              - "null"
-            properties:
-              created_by:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  id:
-                    type:
-                      - number
-                      - "null"
-                  login:
-                    type:
-                      - string
-                      - "null"
-              due_at:
-                type:
-                  - string
-                  - "null"
-              id:
-                type:
-                  - number
-                  - "null"
-              message:
-                type:
-                  - string
-                  - "null"
-          task_assignment:
-            type:
-              - object
-              - "null"
-            properties:
-              assigned_to:
-                type:
-                  - object
-                  - "null"
-                properties:
-                  id:
-                    type:
-                      - number
-                      - "null"
-                  login:
-                    type:
-                      - string
-                      - "null"
-              message:
-                type:
-                  - string
-                  - "null"
-              status:
-                type:
-                  - string
-                  - "null"
-          version_id:
-            type:
-              - string
-              - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      created_by:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-      event_id:
-        type: string
-      event_type:
-        type:
-          - string
-          - "null"
-      ip_address:
-        type:
-          - string
-          - "null"
-      source:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          file_id:
-            type:
-              - string
-              - "null"
-          file_name:
-            type:
-              - string
-              - "null"
-          folder_id:
-            type:
-              - string
-              - "null"
-          folder_name:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          item_id:
-            type:
-              - string
-              - "null"
-          item_name:
-            type:
-              - string
-              - "null"
-          item_type:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-          owned_by:
+                      type:
+                        - string
+                        - "null"
+                    id:
+                      type:
+                        - string
+                        - "null"
+                    sha1:
+                      type:
+                        - string
+                        - "null"
+          parent_folder:
             type:
               - object
               - "null"
@@ -2123,6 +985,111 @@ schemas:
                   - string
                   - "null"
               id:
+                type:
+                  - string
+                  - "null"
+              etag:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              sequence_id:
+                type:
+                  - string
+                  - "null"
+          are_reminders_enabled:
+            type:
+              - boolean
+              - "null"
+          are_text_signatures_enabled:
+            type:
+              - boolean
+              - "null"
+          is_document_preparation_needed:
+            type:
+              - boolean
+              - "null"
+          is_phone_verification_required_to_view:
+            type:
+              - boolean
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: admin_logs
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: stream_position
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_stream_position', '') }}"
+          stop_condition: "{{ response.chunk_size == 0 }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/events?stream_type=admin_logs
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
+      - event_id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - event_id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          source:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
                 type:
                   - string
                   - "null"
@@ -2130,11 +1097,83 @@ schemas:
                 type:
                   - string
                   - "null"
-              name:
+              parent:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+              file_id:
                 type:
                   - string
                   - "null"
-          parent:
+              item_id:
+                type:
+                  - string
+                  - "null"
+              owned_by:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  name:
+                    type:
+                      - string
+                      - "null"
+                  login:
+                    type:
+                      - string
+                      - "null"
+              file_name:
+                type:
+                  - string
+                  - "null"
+              folder_id:
+                type:
+                  - string
+                  - "null"
+              item_name:
+                type:
+                  - string
+                  - "null"
+              item_type:
+                type:
+                  - string
+                  - "null"
+              user_email:
+                type:
+                  - string
+                  - "null"
+              folder_name:
+                type:
+                  - string
+                  - "null"
+          event_id:
+            type: string
+          created_at:
+            type:
+              - string
+              - "null"
+          created_by:
             type:
               - object
               - "null"
@@ -2151,85 +1190,479 @@ schemas:
                 type:
                   - string
                   - "null"
-          user_email:
+              login:
+                type:
+                  - string
+                  - "null"
+          event_type:
             type:
               - string
               - "null"
-    required:
-      - event_id
-  files:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      etag:
-        type:
-          - string
-          - "null"
-      file_version:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
+          ip_address:
             type:
               - string
               - "null"
-          id:
+          accessible_by:
             type:
-              - string
+              - object
               - "null"
-          sha1:
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              login:
+                type:
+                  - string
+                  - "null"
+          additional_details:
             type:
-              - string
+              - object
               - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      sequence_id:
-        type:
-          - string
-          - "null"
-      sha1:
-        type:
-          - string
-          - "null"
-    required:
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              metadata:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  operationParams:
+                    type:
+                      - string
+                      - "null"
+              role:
+                type:
+                  - string
+                  - "null"
+              size:
+                type:
+                  - number
+                  - "null"
+              task:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  id:
+                    type:
+                      - number
+                      - "null"
+                  due_at:
+                    type:
+                      - string
+                      - "null"
+                  message:
+                    type:
+                      - string
+                      - "null"
+                  created_by:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      id:
+                        type:
+                          - number
+                          - "null"
+                      login:
+                        type:
+                          - string
+                          - "null"
+              ekm_id:
+                type:
+                  - string
+                  - "null"
+              message:
+                type:
+                  - string
+                  - "null"
+              collab_id:
+                type:
+                  - string
+                  - "null"
+              collection:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  user:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      id:
+                        type:
+                          - number
+                          - "null"
+                      name:
+                        type:
+                          - string
+                          - "null"
+                      email:
+                        type:
+                          - string
+                          - "null"
+                  collection_id:
+                    type:
+                      - number
+                      - "null"
+                  collection_name:
+                    type:
+                      - string
+                      - "null"
+              comment_id:
+                type:
+                  - number
+                  - "null"
+              service_id:
+                type:
+                  - string
+                  - "null"
+              version_id:
+                type:
+                  - string
+                  - "null"
+              service_name:
+                type:
+                  - string
+                  - "null"
+              sign_request:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  files:
+                    type:
+                      - array
+                      - "null"
+                    items:
+                      type:
+                        - object
+                        - "null"
+                      properties:
+                        type:
+                          type:
+                            - string
+                            - "null"
+                        id:
+                          type:
+                            - string
+                            - "null"
+                        name:
+                          type:
+                            - string
+                            - "null"
+                        parent:
+                          type:
+                            - object
+                            - "null"
+                          properties:
+                            type:
+                              type:
+                                - string
+                                - "null"
+                            id:
+                              type:
+                                - string
+                                - "null"
+                  signer:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      type:
+                        type:
+                          - string
+                          - "null"
+                      id:
+                        type:
+                          - string
+                          - "null"
+                      name:
+                        type:
+                          - string
+                          - "null"
+                      login:
+                        type:
+                          - string
+                          - "null"
+                  status:
+                    type:
+                      - string
+                      - "null"
+                  requestor:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      type:
+                        type:
+                          - string
+                          - "null"
+                      id:
+                        type:
+                          - string
+                          - "null"
+                      name:
+                        type:
+                          - string
+                          - "null"
+                      login:
+                        type:
+                          - string
+                          - "null"
+                  redirection:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      redirect_url:
+                        type:
+                          - string
+                          - "null"
+                      declined_redirect_url:
+                        type:
+                          - string
+                          - "null"
+                  sender_message:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      message:
+                        type:
+                          - string
+                          - "null"
+                      subject:
+                        type:
+                          - string
+                          - "null"
+                  ready_sign_link:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      id:
+                        type:
+                          - string
+                          - "null"
+                  sign_request_id:
+                    type:
+                      - string
+                      - "null"
+                  signer_ip_address:
+                    type:
+                      - string
+                      - "null"
+                  requestor_ip_address:
+                    type:
+                      - string
+                      - "null"
+                  sign_request_short_id:
+                    type:
+                      - string
+                      - "null"
+              shared_link_id:
+                type:
+                  - string
+                  - "null"
+              collection_item:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  item:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      file:
+                        type:
+                          - number
+                          - "null"
+                  user:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      id:
+                        type:
+                          - number
+                          - "null"
+                      name:
+                        type:
+                          - string
+                          - "null"
+                      email:
+                        type:
+                          - string
+                          - "null"
+                  collection_id:
+                    type:
+                      - number
+                      - "null"
+                  collection_name:
+                    type:
+                      - string
+                      - "null"
+              task_assignment:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  status:
+                    type:
+                      - string
+                      - "null"
+                  message:
+                    type:
+                      - string
+                      - "null"
+                  assigned_to:
+                    type:
+                      - object
+                      - "null"
+                    properties:
+                      id:
+                        type:
+                          - number
+                          - "null"
+                      login:
+                        type:
+                          - string
+                          - "null"
+              original_item_id:
+                type:
+                  - string
+                  - "null"
+              invitation_message:
+                type:
+                  - string
+                  - "null"
+              original_item_name:
+                type:
+                  - string
+                  - "null"
+              original_item_type:
+                type:
+                  - string
+                  - "null"
+              sharedLinkSettings:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  newCanEdit:
+                    type:
+                      - boolean
+                      - "null"
+                  newCanPreview:
+                    type:
+                      - boolean
+                      - "null"
+                  newCanDownload:
+                    type:
+                      - boolean
+                      - "null"
+                  newVisibilityStatus:
+                    type:
+                      - string
+                      - "null"
+                  newIsExpirationDateSet:
+                    type:
+                      - boolean
+                      - "null"
+                  newIsPasswordProtected:
+                    type:
+                      - boolean
+                      - "null"
+              is_performed_by_admin:
+                type:
+                  - boolean
+                  - "null"
+              access_token_identifier:
+                type:
+                  - string
+                  - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: files
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 100
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/folders/0/items
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+        record_filter:
+          type: RecordFilter
+          condition: "{{ record['type'] == \"file\"}}"
+    primary_key:
       - id
-  file_collaborations:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      created_by:
-        type:
-          - object
-          - "null"
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
         properties:
           type:
             type:
               - string
               - "null"
           id:
-            type:
-              - string
-              - "null"
-          login:
+            type: string
+          etag:
             type:
               - string
               - "null"
@@ -2237,26 +1670,11 @@ schemas:
             type:
               - string
               - "null"
-      id:
-        type: string
-      invite_email:
-        type:
-          - string
-          - "null"
-      is_access_only:
-        type:
-          - boolean
-          - "null"
-      item:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
+          sha1:
             type:
               - string
               - "null"
-          etag:
+          sequence_id:
             type:
               - string
               - "null"
@@ -2277,15 +1695,482 @@ schemas:
                 type:
                   - string
                   - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: file_collaborations
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: marker
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_marker') }}"
+          stop_condition: "{{ response.get('next_marker') is none }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: >-
+          https://api.box.com/2.0/files/{{ stream_slice['file_id']
+          }}/collaborations
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            stream:
+              $ref: "#/streams/6"
+            parent_key: id
+            partition_field: file_id
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
           id:
+            type: string
+          item:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              etag:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              sha1:
+                type:
+                  - string
+                  - "null"
+              sequence_id:
+                type:
+                  - string
+                  - "null"
+              file_version:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  sha1:
+                    type:
+                      - string
+                      - "null"
+          role:
+            type:
+              - string
+              - "null"
+          status:
+            type:
+              - string
+              - "null"
+          created_at:
+            type:
+              - string
+              - "null"
+          created_by:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              login:
+                type:
+                  - string
+                  - "null"
+          modified_at:
+            type:
+              - string
+              - "null"
+          invite_email:
+            type:
+              - string
+              - "null"
+          is_access_only:
+            type:
+              - boolean
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: folder_collaborations
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: marker
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_marker') }}"
+          stop_condition: "{{ response.get('next_marker') is none }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: >-
+          https://api.box.com/2.0/folders/{{ stream_slice['folder_id']
+          }}/collaborations
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            stream:
+              $ref: "#/streams/14"
+            parent_key: id
+            partition_field: folder_id
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          item:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              etag:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              sequence_id:
+                type:
+                  - string
+                  - "null"
+          role:
+            type:
+              - string
+              - "null"
+          status:
+            type:
+              - string
+              - "null"
+          created_at:
+            type:
+              - string
+              - "null"
+          created_by:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              login:
+                type:
+                  - string
+                  - "null"
+          modified_at:
+            type:
+              - string
+              - "null"
+          invite_email:
+            type:
+              - string
+              - "null"
+          is_access_only:
+            type:
+              - boolean
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: file_comments
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 100
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/files/{{ stream_slice['file_id'] }}/comments
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            stream:
+              $ref: "#/streams/6"
+            parent_key: id
+            partition_field: file_id
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          message:
+            type:
+              - string
+              - "null"
+          created_at:
+            type:
+              - string
+              - "null"
+          created_by:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              login:
+                type:
+                  - string
+                  - "null"
+          is_reply_comment:
+            type:
+              - boolean
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: recent_items
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: marker
+          inject_into: request_parameter
+        pagination_strategy:
+          type: CursorPagination
+          page_size: 100
+          cursor_value: "{{ response.get('next_marker') }}"
+          stop_condition: "{{ response.get('next_marker') is none }}"
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/recent_items
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+            - "*"
+            - item
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          etag:
             type:
               - string
               - "null"
           name:
-            type:
-              - string
-              - "null"
-          sequence_id:
             type:
               - string
               - "null"
@@ -2293,241 +2178,7 @@ schemas:
             type:
               - string
               - "null"
-      modified_at:
-        type:
-          - string
-          - "null"
-      role:
-        type:
-          - string
-          - "null"
-      status:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  folder_collaborations:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      created_by:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      invite_email:
-        type:
-          - string
-          - "null"
-      is_access_only:
-        type:
-          - boolean
-          - "null"
-      item:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          etag:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
           sequence_id:
-            type:
-              - string
-              - "null"
-      modified_at:
-        type:
-          - string
-          - "null"
-      role:
-        type:
-          - string
-          - "null"
-      status:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  file_comments:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      created_by:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      is_reply_comment:
-        type:
-          - boolean
-          - "null"
-      message:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  recent_items:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      etag:
-        type:
-          - string
-          - "null"
-      file_version:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          sha1:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      sequence_id:
-        type:
-          - string
-          - "null"
-      sha1:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  file_tasks:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      assigned_at:
-        type:
-          - string
-          - "null"
-      assigned_to:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          login:
-            type:
-              - string
-              - "null"
-          name:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      item:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          etag:
             type:
               - string
               - "null"
@@ -2548,7 +2199,414 @@ schemas:
                 type:
                   - string
                   - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: file_tasks
+    retriever:
+      type: SimpleRetriever
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/files/{{ stream_slice['file_id'] }}/tasks
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+            - "*"
+            - task_assignment_collection
+            - entries
+            - "*"
+      partition_router:
+        type: SubstreamPartitionRouter
+        parent_stream_configs:
+          - type: ParentStreamConfig
+            stream:
+              $ref: "#/streams/6"
+            parent_key: id
+            partition_field: file_id
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
           id:
+            type: string
+          item:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              etag:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              sha1:
+                type:
+                  - string
+                  - "null"
+              sequence_id:
+                type:
+                  - string
+                  - "null"
+              file_version:
+                type:
+                  - object
+                  - "null"
+                properties:
+                  type:
+                    type:
+                      - string
+                      - "null"
+                  id:
+                    type:
+                      - string
+                      - "null"
+                  sha1:
+                    type:
+                      - string
+                      - "null"
+          status:
+            type:
+              - string
+              - "null"
+          message:
+            type:
+              - string
+              - "null"
+          assigned_at:
+            type:
+              - string
+              - "null"
+          assigned_to:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              name:
+                type:
+                  - string
+                  - "null"
+              login:
+                type:
+                  - string
+                  - "null"
+          resolution_state:
+            type:
+              - string
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: trashed_items
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 1000
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/folders/trash/items
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          etag:
+            type:
+              - string
+              - "null"
+          name:
+            type:
+              - string
+              - "null"
+          sha1:
+            type:
+              - string
+              - "null"
+          sequence_id:
+            type:
+              - string
+              - "null"
+          file_version:
+            type:
+              - object
+              - "null"
+            properties:
+              type:
+                type:
+                  - string
+                  - "null"
+              id:
+                type:
+                  - string
+                  - "null"
+              sha1:
+                type:
+                  - string
+                  - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: users
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/users
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          name:
+            type:
+              - string
+              - "null"
+          login:
+            type:
+              - string
+              - "null"
+          phone:
+            type:
+              - string
+              - "null"
+          status:
+            type:
+              - string
+              - "null"
+          address:
+            type:
+              - string
+              - "null"
+          language:
+            type:
+              - string
+              - "null"
+          timezone:
+            type:
+              - string
+              - "null"
+          job_title:
+            type:
+              - string
+              - "null"
+          avatar_url:
+            type:
+              - string
+              - "null"
+          created_at:
+            type:
+              - string
+              - "null"
+          space_used:
+            type:
+              - number
+              - "null"
+          modified_at:
+            type:
+              - string
+              - "null"
+          space_amount:
+            type:
+              - number
+              - "null"
+          max_upload_size:
+            type:
+              - number
+              - "null"
+        additionalProperties: true
+  - type: DeclarativeStream
+    name: folders
+    retriever:
+      type: SimpleRetriever
+      paginator:
+        type: DefaultPaginator
+        page_size_option:
+          type: RequestOption
+          field_name: limit
+          inject_into: request_parameter
+        page_token_option:
+          type: RequestOption
+          field_name: offset
+          inject_into: request_parameter
+        pagination_strategy:
+          type: OffsetIncrement
+          page_size: 100
+          inject_on_first_request: true
+      requester:
+        type: HttpRequester
+        authenticator:
+          type: OAuthAuthenticator
+          token_refresh_endpoint: https://api.box.com/oauth2/token
+          client_id: "{{ config['client_id'] }}"
+          client_secret: "{{ config['client_secret'] }}"
+          refresh_token: "{{ config['refresh_token'] }}"
+          grant_type: refresh_token
+          access_token_name: access_token
+          expires_in_name: expires_in
+          refresh_request_headers:
+            Content-Type: application/x-www-form-urlencoded
+          refresh_request_body:
+            grant_type: refresh_token
+            client_id: "{{ config['client_id'] }}"
+            client_secret: "{{ config['client_secret'] }}"
+            refresh_token: "{{ config['refresh_token'] }}"
+        http_method: GET
+        url: https://api.box.com/2.0/folders/0/items
+      record_selector:
+        type: RecordSelector
+        extractor:
+          type: DpathExtractor
+          field_path:
+            - entries
+        record_filter:
+          type: RecordFilter
+          condition: "{{ record['type'] == \"folder\"}}"
+    primary_key:
+      - id
+    schema_loader:
+      type: InlineSchemaLoader
+      schema:
+        type: object
+        $schema: http://json-schema.org/schema#
+        required:
+          - id
+        properties:
+          type:
+            type:
+              - string
+              - "null"
+          id:
+            type: string
+          etag:
             type:
               - string
               - "null"
@@ -2560,161 +2618,173 @@ schemas:
             type:
               - string
               - "null"
-          sha1:
-            type:
-              - string
-              - "null"
-      message:
-        type:
-          - string
-          - "null"
-      resolution_state:
-        type:
-          - string
-          - "null"
-      status:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  trashed_items:
+        additionalProperties: true
+
+spec:
+  type: Spec
+  connection_specification:
     type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      etag:
-        type:
-          - string
-          - "null"
-      file_version:
-        type:
-          - object
-          - "null"
-        properties:
-          type:
-            type:
-              - string
-              - "null"
-          id:
-            type:
-              - string
-              - "null"
-          sha1:
-            type:
-              - string
-              - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      sequence_id:
-        type:
-          - string
-          - "null"
-      sha1:
-        type:
-          - string
-          - "null"
+    $schema: http://json-schema.org/draft-07/schema#
     required:
-      - id
-  users:
-    type: object
-    $schema: http://json-schema.org/schema#
-    additionalProperties: true
+      - client_id
+      - client_secret
+      - refresh_token
     properties:
-      type:
-        type:
-          - string
-          - "null"
-      address:
-        type:
-          - string
-          - "null"
-      avatar_url:
-        type:
-          - string
-          - "null"
-      created_at:
-        type:
-          - string
-          - "null"
-      id:
+      client_id:
         type: string
-      job_title:
-        type:
-          - string
-          - "null"
-      language:
-        type:
-          - string
-          - "null"
-      login:
-        type:
-          - string
-          - "null"
-      max_upload_size:
-        type:
-          - number
-          - "null"
-      modified_at:
-        type:
-          - string
-          - "null"
-      name:
-        type:
-          - string
-          - "null"
-      phone:
-        type:
-          - string
-          - "null"
-      space_amount:
-        type:
-          - number
-          - "null"
-      space_used:
-        type:
-          - number
-          - "null"
-      status:
-        type:
-          - string
-          - "null"
-      timezone:
-        type:
-          - string
-          - "null"
-    required:
-      - id
-  folders:
-    type: object
-    $schema: http://json-schema.org/schema#
+        name: client_id
+        order: 0
+        title: OAuth Client ID
+        airbyte_secret: true
+      client_secret:
+        type: string
+        name: client_secret
+        order: 1
+        title: OAuth Client Secret
+        airbyte_secret: true
+      refresh_token:
+        type: string
+        title: Refresh Token
+        airbyte_secret: true
+        order: 2
     additionalProperties: true
-    properties:
-      type:
-        type:
-          - string
-          - "null"
-      etag:
-        type:
-          - string
-          - "null"
-      id:
-        type: string
-      name:
-        type:
-          - string
-          - "null"
-      sequence_id:
-        type:
-          - string
-          - "null"
-    required:
-      - id
+
+metadata:
+  assist:
+    docsUrl: https://developer.box.com/reference/
+  testedStreams:
+    files:
+      hasRecords: true
+      streamHash: f2bddba5e78d73843ff573adddc0f5b664d98deb
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    users:
+      hasRecords: true
+      streamHash: 0e26a32514f04fae7185887ae41861452eb580f7
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    events:
+      hasRecords: true
+      streamHash: c2e5a0002ee07e5307398731959910589d6f8c1a
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+      isStale: false
+    folders:
+      hasRecords: true
+      streamHash: e8aee8caba4e6a759ead1aa1b2b20f27f6d690de
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    admin_logs:
+      hasRecords: true
+      streamHash: d29f65619562bd57f0ab2ffde25f45fe85094fed
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    file_tasks:
+      hasRecords: true
+      streamHash: b7cdc6e9b385a24c4f491d8b820a6924bd52070f
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    collections:
+      hasRecords: true
+      streamHash: 99a1e98e0e5e1f0e34c55e3c067158efc139614d
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    recent_items:
+      hasRecords: true
+      streamHash: a220c9ba1787d7da58f2d496a76a176600c800ff
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    sign_request:
+      hasRecords: false
+      streamHash: a75dbf901501cd636c8087c31ea771b4aba77d65
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    file_comments:
+      hasRecords: true
+      streamHash: 2711d975ffe518367db630ef6dc0c2598b5cb86d
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    trashed_items:
+      hasRecords: true
+      streamHash: 220c9d1eb25065d60d7347c9219ae6882b3bfdb4
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    sign_templates:
+      hasRecords: true
+      streamHash: 4ab2165704ff19049bf1ecc510154302f122e5ba
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    collection_items:
+      hasRecords: true
+      streamHash: 166e60e6b8bccc1e6854a88f7ad29fe76f08a83a
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    file_collaborations:
+      hasRecords: true
+      streamHash: b57e258db538c594ace1cba278854f0702bbe926
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+    folder_collaborations:
+      hasRecords: true
+      streamHash: 9154707962f8ebc5736593f901aa484ba6aa3d34
+      hasResponse: true
+      primaryKeysAreUnique: true
+      primaryKeysArePresent: true
+      responsesAreSuccessful: true
+  autoImportSchema:
+    files: true
+    users: true
+    events: true
+    folders: true
+    admin_logs: true
+    file_tasks: true
+    collections: true
+    recent_items: true
+    sign_request: true
+    file_comments: true
+    trashed_items: true
+    sign_templates: true
+    collection_items: true
+    file_collaborations: true
+    folder_collaborations: true
+  applied_migrations:
+    - from_version: 5.16.0
+      to_version: "*"
+      migration: HttpRequesterUrlBaseToUrl
+      migrated_at: "2025-09-04T19:56:32.961601+00:00"
+    - from_version: 5.16.0
+      to_version: "*"
+      migration: HttpRequesterPathToUrl
+      migrated_at: "2025-09-04T19:56:32.972160+00:00"
+
+concurrency_level:
+  type: ConcurrencyLevel
+  default_concurrency: 1
